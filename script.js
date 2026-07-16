@@ -14,10 +14,24 @@ class Store {
   constructor() {
     this.key = 'admin-dashboard-config';
     this.backupKey = 'admin-dashboard-backups';
+    this.apiUrl = '/api/bookmarks';
     this.data = structuredClone(DEFAULT_CONFIG);
+    this.usingApi = false;
   }
 
   async load() {
+    try {
+      const response = await fetch(this.apiUrl, { cache: 'no-store' });
+      if (response.ok) {
+        this.data = this.normalize(await response.json());
+        this.usingApi = true;
+        localStorage.setItem(this.key, JSON.stringify(this.data));
+        return;
+      }
+    } catch {
+      this.usingApi = false;
+    }
+
     const saved = localStorage.getItem(this.key);
     if (saved) {
       this.data = this.normalize(JSON.parse(saved));
@@ -25,7 +39,7 @@ class Store {
     }
 
     try {
-      const response = await fetch('config.json', { cache: 'no-store' });
+      const response = await fetch('data/bookmarks.json', { cache: 'no-store' });
       if (response.ok) this.data = this.normalize(await response.json());
     } catch {
       this.data = structuredClone(DEFAULT_CONFIG);
@@ -67,6 +81,13 @@ class Store {
 
   save(withBackup = true) {
     localStorage.setItem(this.key, JSON.stringify(this.data));
+    if (this.usingApi) {
+      fetch(this.apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this.data)
+      }).catch(() => { this.usingApi = false; });
+    }
     if (withBackup) this.backup();
   }
 
@@ -259,8 +280,12 @@ class Dashboard {
     card.draggable = this.editing && !category.virtual;
     card.dataset.id = link.id;
     card.addEventListener('click', (event) => {
-      if (this.editing) event.preventDefault();
-      else this.trackOpen(link.id);
+      const isControl = event.target.closest('button, select, option, .edit-tools');
+      if (this.editing || isControl) {
+        event.preventDefault();
+        return;
+      }
+      this.trackOpen(link.id);
     });
     card.addEventListener('dragstart', () => { this.drag = { type: 'link', id: link.id }; });
     card.addEventListener('dragover', (event) => event.preventDefault());
@@ -359,8 +384,17 @@ class Dashboard {
       option.selected = category.id === current;
       select.append(option);
     });
-    select.addEventListener('click', (event) => event.stopPropagation());
-    select.addEventListener('change', () => this.moveLinkToCategory(link.id, select.value));
+    select.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+    select.addEventListener('mousedown', (event) => event.stopPropagation());
+    select.addEventListener('keydown', (event) => event.stopPropagation());
+    select.addEventListener('change', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.moveLinkToCategory(link.id, select.value);
+    });
     return select;
   }
 
