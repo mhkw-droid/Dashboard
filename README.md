@@ -21,4 +21,4 @@ http://localhost:8000
 - `GET /api/bookmarks` liest `data/bookmarks.json`.
 - `POST /api/bookmarks` schreibt die übermittelte JSON-Konfiguration nach `data/bookmarks.json`.
 
-Falls die API nicht erreichbar ist, verwendet die UI `localStorage` als Fallback.
+Wenn die API nicht erreichbar ist, zeigt die UI eine klare Fehlermeldung an und speichert keine Daten im Browser.

@@ -12,39 +12,21 @@ const uid = (prefix) => `${prefix}-${Date.now().toString(36)}-${Math.random().to
 
 class Store {
   constructor() {
-    this.key = 'admin-dashboard-config';
-    this.backupKey = 'admin-dashboard-backups';
     this.apiUrl = '/api/bookmarks';
     this.data = structuredClone(DEFAULT_CONFIG);
-    this.usingApi = false;
+    this.onError = null;
   }
 
   async load() {
     try {
       const response = await fetch(this.apiUrl, { cache: 'no-store' });
-      if (response.ok) {
-        this.data = this.normalize(await response.json());
-        this.usingApi = true;
-        localStorage.setItem(this.key, JSON.stringify(this.data));
-        return;
-      }
-    } catch {
-      this.usingApi = false;
-    }
-
-    const saved = localStorage.getItem(this.key);
-    if (saved) {
-      this.data = this.normalize(JSON.parse(saved));
+      if (!response.ok) throw new Error(`API status ${response.status}`);
+      this.data = this.normalize(await response.json());
       return;
-    }
-
-    try {
-      const response = await fetch('data/bookmarks.json', { cache: 'no-store' });
-      if (response.ok) this.data = this.normalize(await response.json());
     } catch {
       this.data = structuredClone(DEFAULT_CONFIG);
+      this.notifyApiError();
     }
-    this.save(false);
   }
 
   normalize(config) {
@@ -79,26 +61,24 @@ class Store {
     return normalized;
   }
 
-  save(withBackup = true) {
-    localStorage.setItem(this.key, JSON.stringify(this.data));
-    if (this.usingApi) {
-      fetch(this.apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(this.data)
-      }).catch(() => { this.usingApi = false; });
-    }
-    if (withBackup) this.backup();
+  save() {
+    fetch(this.apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(this.data)
+    }).then((response) => {
+      if (!response.ok) this.notifyApiError();
+    }).catch(() => this.notifyApiError());
   }
 
   backup() {
-    const backups = JSON.parse(localStorage.getItem(this.backupKey) || '[]');
-    backups.unshift({
-      name: `config_${new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19)}.json`,
-      created: new Date().toISOString(),
-      data: this.data
-    });
-    localStorage.setItem(this.backupKey, JSON.stringify(backups.slice(0, this.data.settings.backupCount || 10)));
+    this.export(`config_${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(this.data, null, 2));
+  }
+
+  notifyApiError() {
+    const message = 'Speichern nicht möglich - API nicht erreichbar';
+    if (this.onError) this.onError(message);
+    else console.error(message);
   }
 
   export(filename, content, type = 'application/json') {
@@ -127,6 +107,7 @@ class Dashboard {
       form: $('itemForm'),
       importDialog: $('importDialog')
     };
+    this.store.onError = (message) => this.showAppError(message);
   }
 
   init() {
@@ -572,7 +553,11 @@ class Dashboard {
 
   downloadBackup() {
     this.store.backup();
-    this.store.export(`config_${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(this.store.data, null, 2));
+  }
+
+  showAppError(message) {
+    $('formError').textContent = message;
+    console.error(message);
   }
 
   toggleFavorite(id) {
@@ -697,8 +682,21 @@ class Dashboard {
       return;
     }
 
+    const imported = this.parseBookmarkHtml(text);
+    this.mergeImport(imported);
+    this.store.save();
+    this.render();
+  }
+
+  parseBookmarkHtml(text) {
     const doc = new DOMParser().parseFromString(text, 'text/html');
-    const links = [...doc.querySelectorAll('a[href]')].map((anchor, index) => ({
+    const root = doc.querySelector('dl');
+    const imported = structuredClone(DEFAULT_CONFIG);
+    imported.categories = [];
+    if (!root) return imported;
+
+    const topLevelLinks = [];
+    const createLink = (anchor, order) => ({
       id: uid('link'),
       title: anchor.textContent.trim() || anchor.href,
       url: anchor.href,
@@ -710,20 +708,71 @@ class Dashboard {
       lastOpened: null,
       color: '#38bdf8',
       newTab: true,
-      order: index + 1
-    }));
-    this.store.data.categories.push({
-      id: uid('cat'),
-      name: `Import ${new Date().toLocaleDateString('de-DE')}`,
-      icon: '📥',
-      color: '#38bdf8',
-      description: `${links.length} importierte Lesezeichen`,
-      order: this.store.data.categories.length + 1,
-      collapsed: false,
-      links
+      order
     });
-    this.store.save();
-    this.render();
+
+    const createCategory = (name, order) => {
+      const categoryName = name.trim();
+      return {
+        id: this.uniqueCategoryId(categoryName),
+        name: categoryName,
+        icon: '📁',
+        color: '#38bdf8',
+        description: 'Importierter Bookmark-Ordner',
+        order,
+        collapsed: false,
+        links: []
+      };
+    };
+
+    const directDl = (node) => [...node.children].find((child) => child.tagName === 'DL');
+    const siblingDl = (node) => node.nextElementSibling?.tagName === 'DL' ? node.nextElementSibling : null;
+    const walk = (dl, targetLinks = topLevelLinks) => {
+      [...dl.children].filter((child) => child.tagName === 'DT').forEach((dt) => {
+        const folder = [...dt.children].find((child) => child.tagName === 'H3');
+        const anchor = [...dt.children].find((child) => child.tagName === 'A');
+
+        if (folder) {
+          const category = createCategory(folder.textContent, imported.categories.length + 1);
+          imported.categories.push(category);
+          const nested = directDl(dt) || siblingDl(dt);
+          if (nested) walk(nested, category.links);
+          category.links.forEach((link, index) => { link.order = index + 1; });
+          return;
+        }
+
+        if (anchor) targetLinks.push(createLink(anchor, targetLinks.length + 1));
+      });
+    };
+
+    walk(root);
+    if (topLevelLinks.length) {
+      imported.categories.unshift({
+        id: this.uniqueCategoryId('Import'),
+        name: 'Import',
+        icon: '📥',
+        color: '#38bdf8',
+        description: 'Importierte Bookmarks ohne Ordner',
+        order: 1,
+        collapsed: false,
+        links: topLevelLinks
+      });
+    }
+    imported.categories.forEach((category, index) => { category.order = index + 1; });
+    return this.store.normalize(imported);
+  }
+
+  uniqueCategoryId(name) {
+    const base = name.toLowerCase()
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '') || 'import';
+    let id = base;
+    let counter = 2;
+    const exists = () => this.store.data.categories.some((category) => category.id === id);
+    while (exists()) id = `${base}-${counter++}`;
+    return id;
   }
 
   confirmJsonImport(imported) {
