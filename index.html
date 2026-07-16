@@ -1,58 +1,91 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <title>Admin Dashboard</title>
-
-    <link rel="stylesheet" href="style.css">
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
+  <header class="topbar" aria-label="Dashboard Navigation">
+    <div class="brand" aria-label="Admin Dashboard">
+      <span class="brand__logo" aria-hidden="true">⬢</span>
+      <div>
+        <strong>Admin Dashboard</strong>
+        <span>Lokale Startseite</span>
+      </div>
+    </div>
 
-<header>
+    <label class="search" for="searchInput">
+      <span aria-hidden="true">⌕</span>
+      <input type="search" id="searchInput" placeholder="Suche nach Titel, Tags, URL ..." autocomplete="off">
+    </label>
 
-<div class="logo">
+    <nav class="actions" aria-label="Dashboard Aktionen">
+      <button class="ghost" id="favoritesButton" type="button">★ Favoriten</button>
+      <button class="ghost" id="editButton" type="button">✎ Bearbeiten</button>
+      <button class="ghost" id="importButton" type="button">Import</button>
+      <button class="ghost" id="exportButton" type="button">Export</button>
+      <button class="ghost" id="backupButton" type="button">Backup</button>
+      <button class="ghost" id="addCategoryButton" type="button">＋ Kategorie</button>
+      <button class="ghost" id="settingsButton" type="button">⚙</button>
+      <button class="ghost" id="themeButton" type="button" aria-label="Theme umschalten">☾</button>
+    </nav>
 
-🖥 Admin Dashboard
+    <div class="clock" aria-live="polite">
+      <strong id="clockTime">--:--</strong>
+      <span id="clockDate">--</span>
+    </div>
+  </header>
 
-</div>
+  <section class="hero">
+    <div>
+      <p class="eyebrow">Offline • Schnell • Administrierbar</p>
+      <h1>Zentrales Portal für interne Admin-Webanwendungen</h1>
+      <p>Verwalte Kategorien, Links, Favoriten, Statistiken, Imports und Backups vollständig über die Oberfläche.</p>
+    </div>
+    <div class="stats" id="stats" aria-label="Dashboard Statistiken"></div>
+  </section>
 
-<div class="search">
+  <main class="dashboard" id="dashboard" aria-live="polite"></main>
 
-<input
-type="text"
-id="search"
-placeholder="Suche...">
+  <button class="fab" id="addLinkButton" type="button" title="Neuen Link erstellen">＋</button>
 
-</div>
+  <dialog id="itemDialog" class="modal">
+    <form method="dialog" id="itemForm" novalidate>
+      <h2 id="dialogTitle">Eintrag bearbeiten</h2>
+      <input type="hidden" id="itemType">
+      <input type="hidden" id="itemId">
+      <div class="form-grid">
+        <label>Titel / Name<input id="itemTitle" required maxlength="80"></label>
+        <label>URL<input id="itemUrl" placeholder="https://example.local"></label>
+        <label>Icon / Emoji<input id="itemIcon" maxlength="24" placeholder="🖥"></label>
+        <label id="categorySelectField">Kategorie<select id="itemCategory"></select></label>
+        <label>Farbe<input id="itemColor" type="color" value="#38bdf8"></label>
+        <label class="wide">Beschreibung<textarea id="itemDescription" rows="3" maxlength="240"></textarea></label>
+        <label class="wide">Tags<input id="itemTags" placeholder="linux, monitoring, prod"></label>
+      </div>
+      <p class="error" id="formError" role="alert"></p>
+      <div class="modal-actions">
+        <button value="cancel" type="button" id="cancelDialog">Abbrechen</button>
+        <button class="primary" value="default" type="submit">Speichern</button>
+      </div>
+    </form>
+  </dialog>
 
-<div class="buttons">
+  <dialog id="importDialog" class="modal">
+    <form method="dialog" id="importForm">
+      <h2>Import bestätigen</h2>
+      <p id="importSummary" class="muted"></p>
+      <div class="modal-actions stacked">
+        <button value="cancel" type="button" id="cancelImport">Import abbrechen</button>
+        <button value="merge" type="button" id="mergeImport">Importierte Daten zusammenführen</button>
+        <button class="primary" value="replace" type="button" id="replaceImport">Aktuelle Daten ersetzen</button>
+      </div>
+    </form>
+  </dialog>
 
-<button id="editButton">
-Bearbeiten
-</button>
-
-<button id="themeButton">
-🌙
-</button>
-
-</div>
-
-</header>
-
-
-<main id="dashboard">
-
-</main>
-
-
-<script src="script.js"></script>
-
+  <input id="fileImport" type="file" accept=".html,.htm,.json" hidden>
+  <script src="script.js"></script>
 </body>
 </html>
