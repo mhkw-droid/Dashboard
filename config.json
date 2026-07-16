@@ -1,0 +1,51 @@
+{
+  "theme": "dark",
+  "accentColor": "#38bdf8",
+  "settings": {
+    "cardWidth": 300,
+    "animations": true,
+    "fontSize": 16,
+    "backupCount": 10,
+    "openFavoritesOnTop": true
+  },
+  "categories": [
+    {
+      "id": "linux",
+      "name": "Linux",
+      "icon": "🐧",
+      "color": "#22c55e",
+      "description": "Server, Shells und Linux Administration",
+      "order": 1,
+      "collapsed": false,
+      "links": [
+        {"id":"lnx-ssh","title":"SSH Bastion","url":"https://bastion.example.local","icon":"⌁","description":"Zentraler SSH Einstiegspunkt","tags":["linux","ssh","prod"],"favorite":true,"lastOpened":null,"openCount":0,"color":"#22c55e","newTab":true},
+        {"id":"lnx-docs","title":"Runbooks","url":"https://docs.example.local/linux","icon":"📚","description":"Linux Betriebsdokumentation","tags":["docs","runbook"],"favorite":false,"lastOpened":null,"openCount":0,"color":"#84cc16","newTab":true}
+      ]
+    },
+    {
+      "id": "monitoring",
+      "name": "Monitoring",
+      "icon": "📈",
+      "color": "#38bdf8",
+      "description": "Status, Metriken und Alarme",
+      "order": 2,
+      "collapsed": false,
+      "links": [
+        {"id":"mon-grafana","title":"Grafana","url":"https://grafana.example.local","icon":"◉","description":"Dashboards und Metriken","tags":["monitoring","metrics"],"favorite":true,"lastOpened":null,"openCount":0,"color":"#f97316","newTab":true},
+        {"id":"mon-alerts","title":"Alertmanager","url":"https://alerts.example.local","icon":"🚨","description":"Aktive Alarme","tags":["alerts","prometheus"],"favorite":false,"lastOpened":null,"openCount":0,"color":"#fb7185","newTab":true}
+      ]
+    },
+    {
+      "id": "cloud",
+      "name": "Cloud",
+      "icon": "☁️",
+      "color": "#a855f7",
+      "description": "Cloud Portale und Plattformdienste",
+      "order": 3,
+      "collapsed": false,
+      "links": [
+        {"id":"cld-portal","title":"Cloud Console","url":"https://cloud.example.local","icon":"☁️","description":"Interne Cloud Verwaltung","tags":["cloud","iam"],"favorite":false,"lastOpened":null,"openCount":0,"color":"#a855f7","newTab":true}
+      ]
+    }
+  ]
+}
